@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>Act-Test</title>
+
+<body>
+<script type=module>
+
+import {Act} from '../Act.js'
+
+
+var person = {
+    name:'Paul',
+    age:19,
+}
+person = new Act(person)
+
+person.addEventListener('set', function(){
+    console.log('set event', arguments)
+})
+
+person.$set('name', 'Hans');
+
+console.log(person.name)
+
+
+
+</script>
