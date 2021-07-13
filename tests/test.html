@@ -15,15 +15,29 @@ var person = {
     name:'Paul',
     age:19,
 }
-person = new Act(person)
+person = new Act.obj(person).$proxy;
 
-person.addEventListener('set', function(){
-    console.log('set event', arguments)
+person.addEventListener('set', function(e){
+//    console.log('changed', e)
+})
+person.addEventListener('get', function(e){
+//    console.log('get', e)
 })
 
-person.$set('name', 'Hans');
+//person.$set('name', 'Hans');
+person.name = 'gustaf';
 
-console.log(person.name)
+//console.log(person.name)
+
+
+
+var w = new Act.fetch('https://api.opensensemap.org').$proxy;
+
+var x9 = await w.$get('stats',{human:false});
+console.log(x9)
+
+var x9 = await w.$get('stats',{human:true});
+console.log(x9)
 
 
 

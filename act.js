@@ -1,29 +1,46 @@
 
-
-
-
 export class Act extends EventTarget {
     constructor(target, parent){
         super();
+
+        this.addEventListener = this.addEventListener.bind(this);
+        this.removeEventListener = this.removeEventListener.bind(this);
+        this.dispatchEvent = this.dispatchEvent.bind(this);
+
         this.$target = target;
         this.$parent = parent;
     }
     get $proxy(){
         return new Proxy(this, {
-            get(target, prop, receiver) {
-                return target.$get(prop);
+            get(actInstance, prop, receiver) {
+                if (prop in actInstance) {
+                    // if (typeof actInstance[prop] === 'function') {
+                    //     return function(...args) {
+                    //         var thisVal = this === receiver ? actInstance : this;
+                    //         return Reflect.apply(actInstance[prop], thisVal, args);
+                    //     }
+                    // }
+                    return Reflect.get(actInstance, prop, receiver);
+                }
+                return actInstance.$get(prop);
             },
-            set(target, prop, value, receiver) {
-                return target.$set(prop, value);
+            set(actInstance, prop, value, receiver) {
+                if (prop in actInstance) return Reflect.set(actInstance, prop, value, receiver);
+                return actInstance.$set(prop, value);
             }
         });
     }
     $set(prop, value) {
-        console.log(this)
-        if (this.$target[prop]!==value) {
-            this.dispatchEvent(new CustomEvent('set', {prop, value}));
+
+        if (this.$target[prop]===value) return true;
+        this.dispatchEvent(new CustomEvent('set', {prop, value}));
+
+        if (typeof value === 'object') {
+            value = new this.constructor(value, this).$proxy;
+        } else {
             this.$target[prop] = value;
         }
+
         return true;
     }
     $get(prop) {
@@ -33,33 +50,38 @@ export class Act extends EventTarget {
 }
 
 
-
-
-
+// https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel
+/*
+Act.prototype.broadCast = function(id){
+    const bc = new BroadcastChannel('act_'+id);
+    this.addEventListener('set-deep',function(){
+        bc.postMessage(this.target);
+    })
+    bc.onmessage = (e)=>{
+        this.$set(e.data);
+    }
+}
+*/
 
 Act.obj = class extends Act {
     constructor(obj, parent){
         super(obj, parent)
-        this.$target = obj
-        this.$parent = parent;
-    }
-    $set(prop, value) {
-        //super(prop);
-        this.$target[prop] = value;
-    }
-    $get(prop) {
-        //super(prop);
-        return this.$target[prop];
     }
 }
 
 
 Act.fetch = class extends Act {
-    constructor(url) {
-        this.$Url = new Url(url);
+    constructor(url, parent) {
+        super(url, parent)
+        this.$url = url.replace(/\/$/,'');
     }
-    $get(prop){
-        return fetch(this.$url+'/'+prop).then(res=>res.body());
+    $get(prop, params){
+        var url = new URL(this.$url+'/'+prop);
+        url.search = new URLSearchParams(params).toString();
+        return fetch(url).then(res=>res.json());
+    }
+    $dir(prop){
+        return new this.constructor(this.$url+'/'+prop);
     }
     async $set(prop, value){
         const response = await fetch(this.$url+'/'+prop, {
@@ -77,9 +99,24 @@ Act.fetch = class extends Act {
 }
 
 
-Act.denoFs = class extends Act {
-    consturctor(root) {
-        this.root = root;
+
+
+
+
+Act.fs = class extends Act {
+    constructor(target, parent) {
+        super(target, parent);
+
+        setTimeout( async ()=>{
+            const watcher=Deno.watchFs(target);
+            for await(const event of watcher) {}
+        });
+    }
+    $set(prop, value) {
+        return Deno.writeTextFile(this.$target+'/'+prop, value);
+    }
+    $get(prop) {
+        return Deno.readTextFile(this.$target+'/'+prop);
     }
 
 }
