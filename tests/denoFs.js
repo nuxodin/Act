@@ -1,8 +1,9 @@
 
 import {Act} from '../Act.js';
 
-const fs = new Act.fs('./').$proxy;
-fs.$set('holla', 'tobias');
+const fs = new Act.fs('./');
+//fs.$set('holla', 'tobias');
+fs.holla = 'xyz';
 
 const x = await fs.holla;
 

@@ -1,16 +1,16 @@
 
 export class Act extends EventTarget {
-    constructor(target, parent){
+    constructor(parent){
         super();
 
         this.addEventListener = this.addEventListener.bind(this);
         this.removeEventListener = this.removeEventListener.bind(this);
         this.dispatchEvent = this.dispatchEvent.bind(this);
 
-        this.$target = target;
         this.$parent = parent;
+        return this._$proxy;
     }
-    get $proxy(){
+    get _$proxy(){
         return new Proxy(this, {
             get(actInstance, prop, receiver) {
                 if (prop in actInstance) {
@@ -30,22 +30,25 @@ export class Act extends EventTarget {
             }
         });
     }
+    $setValue(prop, value){
+    }
+    $setObject(prop, obj) {
+    }
+    $getProp(prop) {
+    }
     $set(prop, value) {
-
         if (this.$target[prop]===value) return true;
         this.dispatchEvent(new CustomEvent('set', {prop, value}));
-
         if (typeof value === 'object') {
-            value = new this.constructor(value, this).$proxy;
+            this.$setObject(prop, value);
         } else {
-            this.$target[prop] = value;
+            this.$setValue(prop, value);
         }
-
         return true;
     }
     $get(prop) {
         this.dispatchEvent(new CustomEvent('get', {prop}));
-        return this.$target[prop];
+        return this.getProp(prop)
     }
 }
 
@@ -113,7 +116,8 @@ Act.fs = class extends Act {
         });
     }
     $set(prop, value) {
-        return Deno.writeTextFile(this.$target+'/'+prop, value);
+        Deno.writeTextFile(this.$target+'/'+prop, value);
+        return true;
     }
     $get(prop) {
         return Deno.readTextFile(this.$target+'/'+prop);
